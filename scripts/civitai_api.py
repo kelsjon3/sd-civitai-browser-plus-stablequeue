@@ -753,7 +753,8 @@ def update_model_info(model_string=None, model_version=None, only_html=False, in
                     if meta_button:
                         img_html += f'''
                             <div class="civitai_txt2img" style="margin-top:30px;margin-bottom:30px;">
-                            <label onclick='sendImgUrl("{escape(image_url)}")' class="civitai-txt2img-btn" style="max-width:fit-content;cursor:pointer;">Send to txt2img</label>
+                            <label onclick='sendImgUrl("{escape(image_url)}")' class="civitai-txt2img-btn" style="max-width:fit-content;cursor:pointer;margin-right:10px;">Send to txt2img</label>
+                            <label onclick='sendToStableQueue("{escape(image_url)}")' class="civitai-stablequeue-btn" style="max-width:fit-content;cursor:pointer;background-color:#2563eb;color:white;padding:8px 16px;border-radius:4px;display:inline-block;">Send to StableQueue</label>
                             </div></div>
                         '''
                     else:
@@ -1163,3 +1164,140 @@ def api_error_msg(input_string):
         return div + "Failed to retrieve any models from CivitAI<br>The servers might be too busy or down if the issue persists."
     else:
         return div + "The CivitAI-API failed to respond due to an error.<br>Check the logs for more details."
+
+def parse_generation_info(geninfo):
+    """Parse generation info string into structured parameters for StableQueue API"""
+    if not geninfo:
+        return None
+        
+    params = {}
+    
+    # Split by lines to separate prompt, negative prompt, and other parameters
+    lines = geninfo.strip().split('\n')
+    
+    if not lines:
+        return None
+    
+    # First line is typically the prompt
+    params['prompt'] = lines[0].strip()
+    
+    # Look for negative prompt and parameters
+    negative_prompt = ""
+    parameters_line = ""
+    
+    for i, line in enumerate(lines[1:], 1):
+        line = line.strip()
+        if line.startswith('Negative prompt:'):
+            negative_prompt = line[16:].strip()  # Remove "Negative prompt: " prefix
+        elif any(keyword in line.lower() for keyword in ['steps:', 'sampler:', 'cfg scale:', 'seed:', 'size:']):
+            parameters_line = line
+            break
+    
+    params['negative_prompt'] = negative_prompt
+    
+    # Parse parameters from the parameters line
+    if parameters_line:
+        # Split by comma and parse each parameter
+        param_parts = [part.strip() for part in parameters_line.split(',')]
+        
+        for part in param_parts:
+            if ':' in part:
+                key, value = part.split(':', 1)
+                key = key.strip().lower()
+                value = value.strip()
+                
+                try:
+                    if key == 'steps':
+                        params['steps'] = int(value)
+                    elif key == 'sampler':
+                        params['sampler_name'] = value
+                    elif key == 'cfg scale':
+                        params['cfg_scale'] = float(value)
+                    elif key == 'seed':
+                        params['seed'] = int(value) if value != '-1' else -1
+                    elif key == 'size':
+                        if 'x' in value:
+                            width, height = value.split('x')
+                            params['width'] = int(width.strip())
+                            params['height'] = int(height.strip())
+                    elif key == 'model':
+                        # Store model info but don't include in API call
+                        params['model_info'] = value
+                    elif key == 'clip skip':
+                        params['clip_skip'] = int(value)
+                    elif key == 'denoising strength':
+                        params['denoising_strength'] = float(value)
+                except (ValueError, TypeError):
+                    # Skip invalid values
+                    continue
+    
+    # Set defaults for required parameters
+    if 'steps' not in params:
+        params['steps'] = 20
+    if 'cfg_scale' not in params:
+        params['cfg_scale'] = 7.0
+    if 'width' not in params:
+        params['width'] = 512
+    if 'height' not in params:
+        params['height'] = 512
+    if 'sampler_name' not in params:
+        params['sampler_name'] = 'Euler a'
+    if 'seed' not in params:
+        params['seed'] = -1
+    
+    # Add required StableQueue parameters
+    params['batch_size'] = 1
+    params['n_iter'] = 1
+    params['send_images'] = False
+    params['save_images'] = True
+    
+    return params
+
+def send_to_stablequeue(geninfo):
+    """Parse generation info and send to StableQueue API"""
+    try:
+        # Parse the generation info
+        params = parse_generation_info(geninfo)
+        
+        if not params:
+            print("[CivitAI StableQueue] Failed to parse generation info")
+            return "Failed to parse generation info"
+        
+        print(f"[CivitAI StableQueue] Parsed parameters: {params}")
+        
+        # StableQueue API endpoint - you may need to configure this
+        stablequeue_url = "http://192.168.73.124:8083/api/v2/generate"
+        
+        # Prepare payload for StableQueue v2 API
+        stablequeue_payload = {
+            "prompt": params['prompt'],
+            "parameters": params,
+            "target_server": "ArchLinux"
+        }
+        
+        # Send to StableQueue
+        proxies, ssl = get_proxies()
+        headers = {'Content-Type': 'application/json'}
+        
+        response = requests.post(
+            stablequeue_url,
+            json=stablequeue_payload,
+            headers=headers,
+            proxies=proxies,
+            verify=ssl,
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            print(f"[CivitAI StableQueue] Successfully queued job: {result}")
+            return f"Successfully queued in StableQueue! Job ID: {result.get('job_id', 'Unknown')}"
+        else:
+            error_msg = f"StableQueue API error: {response.status_code} - {response.text}"
+            print(f"[CivitAI StableQueue] {error_msg}")
+            return error_msg
+            
+    except Exception as e:
+        error_msg = f"Error sending to StableQueue: {str(e)}"
+        print(f"[CivitAI StableQueue] {error_msg}")
+        return error_msg

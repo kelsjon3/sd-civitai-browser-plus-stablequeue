@@ -1,3 +1,28 @@
+# CivitAI Browser+ with StableQueue Integration
+
+---
+
+### **Fork of BlafKing/sd-civitai-browser-plus with StableQueue support**
+
+This is a modified version of the excellent [CivitAI Browser Plus](https://github.com/BlafKing/sd-civitai-browser-plus) extension that adds **StableQueue integration**.
+
+## **New StableQueue Features 🚀**
+
+### **Send to StableQueue Button**
+* Added **"Send to StableQueue"** button alongside the existing "Send to txt2img" button
+* Extract generation parameters from any CivitAI image and queue directly in StableQueue
+* Bypass UI parameter extraction issues - works directly with PNG metadata
+* Single-click workflow: View image → Click "Send to StableQueue" → Job queued!
+
+### **Automatic Parameter Parsing**
+* Extracts all generation parameters from image metadata
+* Supports prompts, negative prompts, steps, CFG scale, dimensions, sampler, seed, etc.
+* Automatically formats for StableQueue v2 API
+* Configurable StableQueue server endpoint
+
+---
+
+## **Original Extension Features**
 
 ![CivitAI Browser-05+](https://github.com/BlafKing/sd-civitai-browser-plus/assets/9644716/95afcc41-56f0-4398-8779-51cb2a9e2f55)
 

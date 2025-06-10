@@ -146,6 +146,14 @@ def txt2img_output(image_url):
         geninfo = nr + geninfo
         return gr.Textbox.update(value=geninfo)
 
+def stablequeue_output(image_url):
+    clean_url = image_url[4:]
+    geninfo = _api.fetch_and_process_image(clean_url)
+    if geninfo:
+        # Parse the generation info and send to StableQueue
+        return _api.send_to_stablequeue(geninfo)
+    return "Failed to extract generation info from image"
+
 def get_base_models():
     api_url = 'https://civitai.com/api/v1/models?baseModels=GetModels'
     json_return = _api.request_civit_api(api_url, True)
@@ -335,6 +343,7 @@ def on_ui_tabs():
         dl_url = gr.Textbox(visible=False)
         civitai_text2img_output = gr.Textbox(visible=False)
         civitai_text2img_input = gr.Textbox(elem_id="civitai_text2img_input", visible=False)
+        civitai_stablequeue_input = gr.Textbox(elem_id="civitai_stablequeue_input", visible=False)
         page_slider_trigger = gr.Textbox(elem_id="page_slider_trigger", visible=False)
         selected_model_list = gr.Textbox(elem_id="selected_model_list", visible=False)
         selected_type_list = gr.Textbox(elem_id="selected_type_list", visible=False)
@@ -462,6 +471,8 @@ def on_ui_tabs():
         # Model Button Functions #
         
         civitai_text2img_input.change(fn=txt2img_output,inputs=civitai_text2img_input,outputs=civitai_text2img_output)
+        
+        civitai_stablequeue_input.change(fn=stablequeue_output,inputs=civitai_stablequeue_input)
         
         list_html_input.change(fn=all_visible, inputs=list_html, outputs=select_all)
         

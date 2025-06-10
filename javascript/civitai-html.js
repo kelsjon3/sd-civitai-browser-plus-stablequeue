@@ -951,6 +951,39 @@ function genInfo_to_txt2img(genInfo, do_slice=true) {
     }
 }
 
+// Sends Image URL to Python to extract metadata and queue in StableQueue
+function sendToStableQueue(image_url) {
+    const randomNumber = Math.floor(Math.random() * 1000);
+    const paddedNumber = String(randomNumber).padStart(3, '0');
+    const input = gradioApp().querySelector('#civitai_stablequeue_input textarea');
+    
+    if (!input) {
+        console.error('[CivitAI StableQueue] Could not find stablequeue input element. Make sure the extension is loaded.');
+        alert('StableQueue integration not found. Please ensure the extension is properly installed.');
+        return;
+    }
+    
+    // Show loading feedback
+    const button = event?.target;
+    const originalText = button?.textContent;
+    if (button) {
+        button.textContent = 'Sending to StableQueue...';
+        button.style.opacity = '0.7';
+    }
+    
+    input.value = paddedNumber + "." + image_url;
+    updateInput(input);
+    hidePopup();
+    
+    // Reset button after a short delay
+    setTimeout(() => {
+        if (button) {
+            button.textContent = originalText || 'Send to StableQueue';
+            button.style.opacity = '1';
+        }
+    }, 2000);
+}
+
 // Hide installed models
 function hideInstalled(toggleValue) {
     const modelList =  document.querySelectorAll('.column.civmodellist > .civmodelcardinstalled')
