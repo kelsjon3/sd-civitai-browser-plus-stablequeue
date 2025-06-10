@@ -1275,9 +1275,13 @@ def send_to_stablequeue(geninfo):
             "target_server": "ArchLinux"
         }
         
-        # Send to StableQueue
+        # Send to StableQueue with API authentication
         proxies, ssl = get_proxies()
-        headers = {'Content-Type': 'application/json'}
+        headers = {
+            'Content-Type': 'application/json',
+            'X-API-Key': 'mk_fe9de4d41272827de0f69815',
+            'X-API-Secret': '3d43bf4285c3dd90a070ee805dd05097'
+        }
         
         response = requests.post(
             stablequeue_url,
