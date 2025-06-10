@@ -1256,6 +1256,23 @@ def parse_generation_info(geninfo):
 def send_to_stablequeue(geninfo):
     """Parse generation info and send to StableQueue API"""
     try:
+        # Get StableQueue settings from configuration
+        stablequeue_base_url = getattr(opts, "stablequeue_url", "http://192.168.73.124:8083")
+        api_key = getattr(opts, "stablequeue_api_key", "")
+        api_secret = getattr(opts, "stablequeue_api_secret", "")
+        default_server = getattr(opts, "stablequeue_default_server", "ArchLinux")
+        
+        # Validate required settings
+        if not stablequeue_base_url:
+            error_msg = "StableQueue URL not configured. Please set it in Settings > CivitAI Browser+"
+            print(f"[CivitAI StableQueue] {error_msg}")
+            return error_msg
+            
+        if not api_key or not api_secret:
+            error_msg = "StableQueue API credentials not configured. Please set them in Settings > CivitAI Browser+"
+            print(f"[CivitAI StableQueue] {error_msg}")
+            return error_msg
+        
         # Parse the generation info
         params = parse_generation_info(geninfo)
         
@@ -1265,22 +1282,29 @@ def send_to_stablequeue(geninfo):
         
         print(f"[CivitAI StableQueue] Parsed parameters: {params}")
         
-        # StableQueue API endpoint - you may need to configure this
-        stablequeue_url = "http://192.168.73.124:8083/api/v2/generate"
+        # Build the StableQueue API endpoint URL
+        stablequeue_url = f"{stablequeue_base_url.rstrip('/')}/api/v2/generate"
         
-        # Prepare payload for StableQueue v2 API
+        # Rename 'prompt' to 'positive_prompt' for StableQueue API
+        if 'prompt' in params:
+            params['positive_prompt'] = params.pop('prompt')
+        
+        # Prepare payload for StableQueue v2 API (correct format)
         stablequeue_payload = {
-            "prompt": params['prompt'],
-            "parameters": params,
-            "target_server": "ArchLinux"
+            "app_type": "forge",
+            "target_server_alias": default_server,
+            "source_info": "civitai_browser_plus",
+            "generation_params": params
         }
+        
+        print(f"[CivitAI StableQueue] Sending payload: {stablequeue_payload}")
         
         # Send to StableQueue with API authentication
         proxies, ssl = get_proxies()
         headers = {
             'Content-Type': 'application/json',
-            'X-API-Key': 'mk_a0b2c434c9c358fba95fcc47',
-            'X-API-Secret': 'a156e930-9853-4a7f-b2c3-f6b020cc5aee'
+            'X-API-Key': api_key,
+            'X-API-Secret': api_secret
         }
         
         response = requests.post(

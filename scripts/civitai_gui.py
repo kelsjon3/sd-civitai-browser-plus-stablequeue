@@ -1323,6 +1323,47 @@ def on_ui_settings():
         ).info("Not recommended for security, may be required if you do not have the correct CA Bundle available")
     )
 
+    # StableQueue Integration
+    shared.opts.add_option(
+        "stablequeue_url",
+        shared.OptionInfo(
+            "http://192.168.73.124:8083",
+            "StableQueue Server URL",
+            section=browser,
+            **({'category_id': cat_id} if ver_bool else {})
+        ).info("URL of your StableQueue server")
+    )
+    
+    shared.opts.add_option(
+        "stablequeue_api_key",
+        shared.OptionInfo(
+            "",
+            "StableQueue API Key", 
+            section=browser,
+            **({'category_id': cat_id} if ver_bool else {})
+        ).info("API key from your StableQueue instance")
+    )
+    
+    shared.opts.add_option(
+        "stablequeue_api_secret",
+        shared.OptionInfo(
+            "",
+            "StableQueue API Secret",
+            section=browser,
+            **({'category_id': cat_id} if ver_bool else {})
+        ).info("API secret from your StableQueue instance")
+    )
+    
+    shared.opts.add_option(
+        "stablequeue_default_server",
+        shared.OptionInfo(
+            "ArchLinux",
+            "Default Target Server",
+            section=browser,
+            **({'category_id': cat_id} if ver_bool else {})
+        ).info("Default server alias to send jobs to (you can configure servers in StableQueue)")
+    )
+
     # Default sub folders
     use_LORA = getattr(opts, "use_LORA", False)
     folders = [
