@@ -1279,8 +1279,8 @@ def send_to_stablequeue(geninfo):
         proxies, ssl = get_proxies()
         headers = {
             'Content-Type': 'application/json',
-            'X-API-Key': 'mk_fe9de4d41272827de0f69815',
-            'X-API-Secret': '3d43bf4285c3dd90a070ee805dd05097'
+            'X-API-Key': 'mk_a0b2c434c9c358fba95fcc47',
+            'X-API-Secret': 'a156e930-9853-4a7f-b2c3-f6b020cc5aee'
         }
         
         response = requests.post(
