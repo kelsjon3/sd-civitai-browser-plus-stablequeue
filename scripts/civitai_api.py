@@ -1221,8 +1221,12 @@ def parse_generation_info(geninfo):
                             params['width'] = int(width.strip())
                             params['height'] = int(height.strip())
                     elif key == 'model':
-                        # Store model info but don't include in API call
+                        # Store model info and include it as checkpoint_name for StableQueue
                         params['model_info'] = value
+                        params['checkpoint_name'] = value
+                    elif key in ['model hash', 'model_hash']:
+                        # Store model hash for additional validation
+                        params['model_hash'] = value
                     elif key == 'clip skip':
                         params['clip_skip'] = int(value)
                     elif key == 'denoising strength':
