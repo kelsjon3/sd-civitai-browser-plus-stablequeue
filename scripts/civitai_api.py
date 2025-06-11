@@ -1165,100 +1165,12 @@ def api_error_msg(input_string):
     else:
         return div + "The CivitAI-API failed to respond due to an error.<br>Check the logs for more details."
 
-def parse_generation_info(geninfo):
-    """Parse generation info string into structured parameters for StableQueue API"""
-    if not geninfo:
-        return None
-        
-    params = {}
-    
-    # Split by lines to separate prompt, negative prompt, and other parameters
-    lines = geninfo.strip().split('\n')
-    
-    if not lines:
-        return None
-    
-    # First line is typically the prompt
-    params['prompt'] = lines[0].strip()
-    
-    # Look for negative prompt and parameters
-    negative_prompt = ""
-    parameters_line = ""
-    
-    for i, line in enumerate(lines[1:], 1):
-        line = line.strip()
-        if line.startswith('Negative prompt:'):
-            negative_prompt = line[16:].strip()  # Remove "Negative prompt: " prefix
-        elif any(keyword in line.lower() for keyword in ['steps:', 'sampler:', 'cfg scale:', 'seed:', 'size:']):
-            parameters_line = line
-            break
-    
-    params['negative_prompt'] = negative_prompt
-    
-    # Parse parameters from the parameters line
-    if parameters_line:
-        # Split by comma and parse each parameter
-        param_parts = [part.strip() for part in parameters_line.split(',')]
-        
-        for part in param_parts:
-            if ':' in part:
-                key, value = part.split(':', 1)
-                key = key.strip().lower()
-                value = value.strip()
-                
-                try:
-                    if key == 'steps':
-                        params['steps'] = int(value)
-                    elif key == 'sampler':
-                        params['sampler_name'] = value
-                    elif key == 'cfg scale':
-                        params['cfg_scale'] = float(value)
-                    elif key == 'seed':
-                        params['seed'] = int(value) if value != '-1' else -1
-                    elif key == 'size':
-                        if 'x' in value:
-                            width, height = value.split('x')
-                            params['width'] = int(width.strip())
-                            params['height'] = int(height.strip())
-                    elif key == 'model':
-                        # Store model info and include it as checkpoint_name for StableQueue
-                        params['model_info'] = value
-                        params['checkpoint_name'] = value
-                    elif key in ['model hash', 'model_hash']:
-                        # Store model hash for additional validation
-                        params['model_hash'] = value
-                    elif key == 'clip skip':
-                        params['clip_skip'] = int(value)
-                    elif key == 'denoising strength':
-                        params['denoising_strength'] = float(value)
-                except (ValueError, TypeError):
-                    # Skip invalid values
-                    continue
-    
-    # Set defaults for required parameters
-    if 'steps' not in params:
-        params['steps'] = 20
-    if 'cfg_scale' not in params:
-        params['cfg_scale'] = 7.0
-    if 'width' not in params:
-        params['width'] = 512
-    if 'height' not in params:
-        params['height'] = 512
-    if 'sampler_name' not in params:
-        params['sampler_name'] = 'Euler a'
-    if 'seed' not in params:
-        params['seed'] = -1
-    
-    # Add required StableQueue parameters
-    params['batch_size'] = 1
-    params['n_iter'] = 1
-    params['send_images'] = False
-    params['save_images'] = True
-    
-    return params
+# NOTE: parse_generation_info function removed - no longer needed
+# StableQueue now receives the complete generation info string directly
+# and handles parsing on the backend, which is more reliable and future-proof
 
 def send_to_stablequeue(geninfo):
-    """Parse generation info and send to StableQueue API"""
+    """Send complete generation info string to StableQueue API"""
     try:
         # Get StableQueue settings from configuration
         stablequeue_base_url = getattr(opts, "stablequeue_url", "http://192.168.73.124:8083")
@@ -1277,31 +1189,25 @@ def send_to_stablequeue(geninfo):
             print(f"[CivitAI StableQueue] {error_msg}")
             return error_msg
         
-        # Parse the generation info
-        params = parse_generation_info(geninfo)
+        # Validate generation info
+        if not geninfo or not geninfo.strip():
+            print("[CivitAI StableQueue] No generation info provided")
+            return "No generation info to send"
         
-        if not params:
-            print("[CivitAI StableQueue] Failed to parse generation info")
-            return "Failed to parse generation info"
-        
-        print(f"[CivitAI StableQueue] Parsed parameters: {params}")
+        print(f"[CivitAI StableQueue] Sending complete generation info: {geninfo}")
         
         # Build the StableQueue API endpoint URL
         stablequeue_url = f"{stablequeue_base_url.rstrip('/')}/api/v2/generate"
         
-        # Rename 'prompt' to 'positive_prompt' for StableQueue API
-        if 'prompt' in params:
-            params['positive_prompt'] = params.pop('prompt')
-        
-        # Prepare payload for StableQueue v2 API (correct format)
+        # Prepare payload for StableQueue v2 API with complete generation info
         stablequeue_payload = {
             "app_type": "forge",
             "target_server_alias": default_server,
             "source_info": "civitai_browser_plus",
-            "generation_params": params
+            "generation_info_raw": geninfo.strip()  # Send complete generation info string
         }
         
-        print(f"[CivitAI StableQueue] Sending payload: {stablequeue_payload}")
+        print(f"[CivitAI StableQueue] Sending payload with raw generation info")
         
         # Send to StableQueue with API authentication
         proxies, ssl = get_proxies()
